@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+
+if [ $1 ]; then
+	OPENSSL_VERSION=$1
+else
+	OPENSSL_VERSION="0.9.8k"
+fi
+
+BUILD_OPTIONS="zlib enable-tlsext"
+# the config i use for tlsreport so i catch as much as possible
+#BUILD_OPTIONS="zlib enable-tlsext enable-ec enable-camellia enable-seed enable-rc5 enable-rc2 enable-rc4 enable-idea"
+PREFIX="/usr/local/ssl"
+
+echo ""
+echo "Beginning build of universal binaries for OpenSSL ${OPENSSL_VERSION}..."
+echo ""
+# fetch the openssl source
+if [ ! -f openssl-${OPENSSL_VERSION}.tar.gz ]; then
+	echo "Fetching source package..."
+	curl -O http://openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+	echo ""
+fi
+echo "Unpacking source packaging..."
+mkdir -p openssl-${OPENSSL_VERSION}
+tar xvfz openssl-${OPENSSL_VERSION}.tar.gz > openssl-${OPENSSL_VERSION}/openssl_build.log 2>&1 
+cd openssl-${OPENSSL_VERSION}
+
+# build the arch-specific binaries
+echo "Building architecture-specific packages..."
+for BUILD_PLATFORM in darwin-ppc-cc darwin64-ppc-cc darwin-i386-cc darwin64-x86_64-cc; do
+	echo "   Building ${BUILD_PLATFORM}..."
+	ARCH_DIR=build/${BUILD_PLATFORM}
+	mkdir -p ${ARCH_DIR}
+
+	make clean >> openssl_build.log 2>&1 
+	./Configure ${BUILD_PLATFORM} --prefix=${PREFIX} shared ${BUILD_OPTIONS} >> openssl_build.log 2>&1
+	make >> openssl_build.log 2>&1 
+		
+	ls *.a > static_libs.tmp 
+	ls  *.?.?.?.dylib > dynamic_libs.tmp
+	mv *.a *.?.?.?.dylib apps/openssl ${ARCH_DIR} >> openssl_build.log 2>&1 
+done
+
+# assemble the universal binaries from the arch-specific ones
+echo "Assembling universal binary package..."
+for lib in `cat static_libs.tmp`; do
+	lipo -create build/*/$lib -output $lib
+done
+lipo -create build/*/openssl -output apps/openssl
+echo "Universal binaries successfully built."
+echo ""
+echo "Installing..."
+make install >> openssl_build.log 2>&1
+
+# this is required because of something i don't understand about the openssl build process
+#  that blows away the dynamic libs, but not the statics.
+for lib in `cat dynamic_libs.tmp`; do
+	lipo -create build/*/$lib -output $lib
+done
+cp *.?.?.?.dylib ${PREFIX}/lib/
+echo "Installation complete."
+echo ""
