@@ -7,6 +7,15 @@ else
 	OPENSSL_VERSION="0.9.8k"
 fi
 
+DARWIN_VERSION=`uname -r`
+if [ $DARWIN_VERSION = "10.0.0" ]; then
+	BUILD_PLATFORMS="darwin-i386-cc darwin64-x86_64-cc"
+else
+	BUILD_PLATFORMS="darwin-ppc-cc darwin64-ppc-cc darwin-i386-cc darwin64-x86_64-cc"
+fi
+echo ""
+echo "Building for Darwin kernel version ${DARWIN_VERSION} (${BUILD_PLATFORMS})"
+
 BUILD_OPTIONS="zlib enable-tlsext"
 # the config i use for tlsreport so i catch as much as possible
 #BUILD_OPTIONS="zlib enable-tlsext enable-ec enable-camellia enable-seed enable-rc5 enable-rc2 enable-rc4 enable-idea"
@@ -28,7 +37,7 @@ cd openssl-${OPENSSL_VERSION}
 
 # build the arch-specific binaries
 echo "Building architecture-specific packages..."
-for BUILD_PLATFORM in darwin-ppc-cc darwin64-ppc-cc darwin-i386-cc darwin64-x86_64-cc; do
+for BUILD_PLATFORM in $BUILD_PLATFORMS; do
 	echo "   Building ${BUILD_PLATFORM}..."
 	ARCH_DIR=build/${BUILD_PLATFORM}
 	mkdir -p ${ARCH_DIR}
