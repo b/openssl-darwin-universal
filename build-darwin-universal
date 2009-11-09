@@ -4,7 +4,7 @@
 if [ $1 ]; then
 	OPENSSL_VERSION=$1
 else
-	OPENSSL_VERSION="0.9.8k"
+	OPENSSL_VERSION="0.9.8l"
 fi
 
 DARWIN_VERSION=`uname -r`
